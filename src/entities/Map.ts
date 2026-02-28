@@ -31,17 +31,13 @@ export class Map {
             }
         }
 
-        // Generate base protection
-        for (let r = 22; r <= 25; r++) {
-            this.grid[r][10] = 1; // Left wall (cols 10, 11)
-            this.grid[r][11] = 1;
-            this.grid[r][14] = 1; // Right wall (cols 14, 15)
-            this.grid[r][15] = 1;
+        // Generate base protection (1 block thick)
+        for (let r = 23; r <= 25; r++) {
+            this.grid[r][11] = 1; // Left wall (col 11)
+            this.grid[r][14] = 1; // Right wall (col 14)
         }
         for (let c = 12; c <= 13; c++) {
-            this.grid[22][c] = 1; // Top wall (rows 22, 23)
-            this.grid[23][c] = 1;
-            // Base itself 24-25, 12-13, keep 0
+            this.grid[23][c] = 1; // Top wall (row 23)
         }
 
         // Fill with random obstacles based on stage using 2x2 logic
@@ -80,6 +76,14 @@ export class Map {
                 const x = c * TILE_SIZE;
                 const y = r * TILE_SIZE;
                 const type = this.grid[r][c];
+
+                if (type === 0) continue;
+
+                ctx.save();
+                // Shrink all terrain visually (bricks, steel, bush, river) by 15%
+                ctx.translate(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+                ctx.scale(0.85, 0.85);
+                ctx.translate(-(x + TILE_SIZE / 2), -(y + TILE_SIZE / 2));
 
                 if (type === 1 && layer === 'ground') {
                     // --- Brick Wall Segment (Wasteland style) ---
@@ -182,6 +186,8 @@ export class Map {
                     ctx.lineTo(x + 22, y + 16);
                     ctx.stroke();
                 }
+
+                ctx.restore();
             }
         }
 
