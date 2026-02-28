@@ -65,7 +65,7 @@ export class PowerUp extends Entity {
         // Rounded rect background
         ctx.fillStyle = 'rgba(20,18,15,0.85)';
         ctx.beginPath();
-        ctx.roundRect(this.x, this.y, this.width, this.height, 4);
+        ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 4);
         ctx.fill();
 
         // Border
