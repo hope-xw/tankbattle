@@ -48,13 +48,15 @@ export class PowerUp extends Entity {
     }
 
     public draw(ctx: CanvasRenderingContext2D) {
-        if (!this.visible) return;
-
-        const cx = this.x + this.width / 2;
-        const cy = this.y + this.height / 2;
-        const color = POWERUP_COLORS[this.type];
-
         ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+        if (!this.visible) {
+            ctx.restore();
+            return;
+        }
+
+        const color = POWERUP_COLORS[this.type];
 
         // Background glow
         ctx.shadowBlur = 10;
@@ -78,7 +80,7 @@ export class PowerUp extends Entity {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = color;
-        ctx.fillText(POWERUP_LABELS[this.type], cx, cy);
+        ctx.fillText(POWERUP_LABELS[this.type], 0, 0);
 
         ctx.restore();
     }

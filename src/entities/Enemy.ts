@@ -61,7 +61,7 @@ export class Enemy extends Tank {
             ctx.rotate(this.flashTimer / 400);
 
             ctx.beginPath();
-            ctx.arc(0, 0, this.width / 2 + 6, 0, Math.PI * 2);
+            ctx.arc(0, 0, this.width / 2 - 2, 0, Math.PI * 2);
             ctx.setLineDash([10, 5, 2, 5]);
             ctx.stroke();
             ctx.restore();
@@ -85,9 +85,9 @@ export class Enemy extends Tank {
         if (this.hasPowerUp) {
             const types: PowerUpType[] = ['star', 'shield', 'timer', 'grenade', 'shovel', 'life', 'grapefruit'];
             const type = types[Math.floor(Math.random() * types.length)];
-            // Place on a random open area
-            const px = Math.random() * (this.game.map.grid[0].length * 25 - 60) + 30;
-            const py = Math.random() * (this.game.map.grid.length * 25 - 60) + 60;
+            // Place on a random open area (ensure bounds safe up to width=30 power up)
+            const px = Math.random() * (this.game.map.grid[0].length * 25 - 30);
+            const py = Math.random() * (this.game.map.grid.length * 25 - 30);
             this.game.addEntity(new PowerUp(this.game, px, py, type));
         }
 

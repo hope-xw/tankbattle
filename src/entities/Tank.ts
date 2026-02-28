@@ -66,6 +66,8 @@ export abstract class Tank extends Entity {
 
             for (const e of this.game.entities) {
                 if (e !== this && e instanceof Tank && dummy.collidesWith(e)) {
+                    // Let players and allies pass through each other to prevent getting stuck
+                    if (this.isEnemy === false && e.isEnemy === false) continue;
                     canMove = false;
                     break;
                 }

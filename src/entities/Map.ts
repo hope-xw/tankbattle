@@ -33,34 +33,42 @@ export class Map {
 
         // Generate base protection
         for (let r = 22; r <= 25; r++) {
-            this.grid[r][11] = 1; // Left wall
-            this.grid[r][14] = 1; // Right wall
+            this.grid[r][10] = 1; // Left wall (cols 10, 11)
+            this.grid[r][11] = 1;
+            this.grid[r][14] = 1; // Right wall (cols 14, 15)
+            this.grid[r][15] = 1;
         }
         for (let c = 12; c <= 13; c++) {
-            this.grid[22][c] = 1; // Top wall
+            this.grid[22][c] = 1; // Top wall (rows 22, 23)
+            this.grid[23][c] = 1;
             // Base itself 24-25, 12-13, keep 0
         }
 
-        // Fill with random obstacles based on stage
-        for (let r = 2; r < ROWS - 3; r++) {     // Leave top 2 rows and bottom clear for spawns
-            for (let c = 2; c < COLS - 2; c++) {
+        // Fill with random obstacles based on stage using 2x2 logic
+        for (let r = 2; r < ROWS - 2; r += 2) {     // Leave top 2 rows and bottom clear for spawns
+            for (let c = 2; c < COLS - 2; c += 2) {
                 // Keep center column somewhat clear for flow
-                if (c >= 11 && c <= 14 && r >= 20) continue;
+                if (c >= 10 && c <= 15 && r >= 20) continue;
 
                 // Keep enemy spawn blocks clear
                 if (r < 4 && (c < 4 || c > COLS - 5 || (c > 10 && c < 16))) continue;
 
-                if (Math.random() < 0.25) {
+                if (Math.random() < 0.3) {
+                    let type = 1;
                     // Start rendering Bush at Stage 2+, River at Stage 3+
                     if (stage >= 3 && Math.random() < 0.15) {
-                        this.grid[r][c] = 4; // River
+                        type = 4; // River
                     } else if (stage >= 2 && Math.random() < 0.2) {
-                        this.grid[r][c] = 3; // Bush
+                        type = 3; // Bush
                     } else if (Math.random() < 0.1 + (stage * 0.02)) {
-                        this.grid[r][c] = 2; // Steel
-                    } else {
-                        this.grid[r][c] = 1; // Brick
+                        type = 2; // Steel
                     }
+
+                    // Assign 2x2 block
+                    this.grid[r][c] = type;
+                    this.grid[r + 1][c] = type;
+                    this.grid[r][c + 1] = type;
+                    this.grid[r + 1][c + 1] = type;
                 }
             }
         }
