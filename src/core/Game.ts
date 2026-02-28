@@ -5,6 +5,7 @@ import { Entity } from '../entities/Entity';
 import { Enemy } from '../entities/Enemy';
 import { Tank } from '../entities/Tank';
 import { PowerUp } from '../entities/PowerUp';
+import { Ally } from '../entities/Ally';
 import { AudioEngine } from './Audio';
 
 export class Game {
@@ -120,6 +121,9 @@ export class Game {
     private update(dt: number) {
         const delta = Math.min(dt, 50);
 
+        // Sort entities by zIndex for proper layer rendering (e.g. bushes over tanks)
+        this.entities.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
         // Shovel timer (base wall upgrade)
         if (this.shovelTimer > 0) {
             this.shovelTimer -= delta;
@@ -179,6 +183,9 @@ export class Game {
                 break;
             case 'life':
                 player.lives++;
+                break;
+            case 'grapefruit':
+                this.addEntity(new Ally(this, player.x, player.y));
                 break;
         }
     }
@@ -261,10 +268,12 @@ export class Game {
         ctx.fillStyle = '#0f0e0d';
         ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
 
-        this.map.draw(ctx);
+        this.map.draw(ctx, 'ground');
 
-        this.entities.sort((a, b) => a.zIndex - b.zIndex);
+        this.entities.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
         this.entities.forEach(e => e.draw(ctx));
+
+        this.map.draw(ctx, 'bush');
 
         ctx.restore();
 

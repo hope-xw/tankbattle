@@ -6,35 +6,7 @@ export const TILE_SIZE = 25;
 export const ROWS = 26;
 export const COLS = 26;
 
-// 0: empty, 1: brick, 2: steel
-const levelData = [
-    "00000000000000000000000000",
-    "00000000000000000000000000",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011001122221100110011",
-    "00110011001122221100110011",
-    "00000000000000000000000000",
-    "00000000000000000000000000",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00002200000000000000220000",
-    "00002200000000000000220000",
-    "22000000111100001111000022",
-    "22000000111100001111000022",
-    "00000000000000000000000000",
-    "00000000000000000000000000",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011001100001100110011",
-    "00110011000000000000110011",
-    "00110011000111100000110011",
-    "00000000000100100000000000",
-    "00000000000100100000000000"
-];
+// 0: empty, 1: brick, 2: steel, 3: bush, 4: river
 
 export class Map {
     public grid: number[][] = [];
@@ -47,23 +19,61 @@ export class Map {
 
     public loadLevel() {
         this.grid = [];
+        this.baseAlive = true;
+
+        const stage = this.game.stage;
+
+        // initialize empty
         for (let r = 0; r < ROWS; r++) {
             this.grid[r] = [];
             for (let c = 0; c < COLS; c++) {
-                this.grid[r][c] = parseInt(levelData[r].charAt(c), 10);
+                this.grid[r][c] = 0;
             }
         }
-        this.baseAlive = true;
+
+        // Generate base protection
+        for (let r = 22; r <= 25; r++) {
+            this.grid[r][11] = 1; // Left wall
+            this.grid[r][14] = 1; // Right wall
+        }
+        for (let c = 12; c <= 13; c++) {
+            this.grid[22][c] = 1; // Top wall
+            // Base itself 24-25, 12-13, keep 0
+        }
+
+        // Fill with random obstacles based on stage
+        for (let r = 2; r < ROWS - 3; r++) {     // Leave top 2 rows and bottom clear for spawns
+            for (let c = 2; c < COLS - 2; c++) {
+                // Keep center column somewhat clear for flow
+                if (c >= 11 && c <= 14 && r >= 20) continue;
+
+                // Keep enemy spawn blocks clear
+                if (r < 4 && (c < 4 || c > COLS - 5 || (c > 10 && c < 16))) continue;
+
+                if (Math.random() < 0.25) {
+                    // Start rendering Bush at Stage 2+, River at Stage 3+
+                    if (stage >= 3 && Math.random() < 0.15) {
+                        this.grid[r][c] = 4; // River
+                    } else if (stage >= 2 && Math.random() < 0.2) {
+                        this.grid[r][c] = 3; // Bush
+                    } else if (Math.random() < 0.1 + (stage * 0.02)) {
+                        this.grid[r][c] = 2; // Steel
+                    } else {
+                        this.grid[r][c] = 1; // Brick
+                    }
+                }
+            }
+        }
     }
 
-    public draw(ctx: CanvasRenderingContext2D) {
+    public draw(ctx: CanvasRenderingContext2D, layer: 'ground' | 'bush' = 'ground') {
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
                 const x = c * TILE_SIZE;
                 const y = r * TILE_SIZE;
                 const type = this.grid[r][c];
 
-                if (type === 1) {
+                if (type === 1 && layer === 'ground') {
                     // --- Brick Wall Segment (Wasteland style) ---
                     // Base clay color
                     ctx.fillStyle = '#8b4513';
@@ -93,7 +103,7 @@ export class Map {
                     ctx.fillStyle = 'rgba(0,0,0,0.3)';
                     ctx.fillRect(x, y + TILE_SIZE - 4, TILE_SIZE, 4);
 
-                } else if (type === 2) {
+                } else if (type === 2 && layer === 'ground') {
                     // --- Concrete Road Barrier ---
                     // Base ash gray
                     ctx.fillStyle = '#6b6e6b';
@@ -112,6 +122,57 @@ export class Map {
                     // Barrier top rib
                     ctx.fillStyle = '#9aa09b';
                     ctx.fillRect(x + 8, y + 6, TILE_SIZE - 16, TILE_SIZE - 12);
+
+                    // Internal bevel
+                    ctx.strokeStyle = '#8d918d'; // Highlight
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 2, y + TILE_SIZE - 2);
+                    ctx.lineTo(x + 2, y + 2);
+                    ctx.lineTo(x + TILE_SIZE - 2, y + 2);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#4b4d4b'; // Shadow
+                    ctx.beginPath();
+                    ctx.moveTo(x + TILE_SIZE - 2, y + 2);
+                    ctx.lineTo(x + TILE_SIZE - 2, y + TILE_SIZE - 2);
+                    ctx.lineTo(x + 2, y + TILE_SIZE - 2);
+                    ctx.stroke();
+
+                    // Rebar details (exposed wire)
+                    ctx.strokeStyle = '#a65427'; // rusted rebar
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x + TILE_SIZE / 4, y + TILE_SIZE / 4);
+                    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+                    ctx.moveTo(x + (TILE_SIZE / 4) * 3, y + TILE_SIZE / 4);
+                    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+                    ctx.stroke();
+
+                } else if (type === 3 && layer === 'bush') {
+                    // --- Bush ---
+                    ctx.fillStyle = '#1e401e'; // Dark green
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#2d5e2d'; // Leaf highlights
+                    ctx.beginPath();
+                    ctx.arc(x + 5, y + 5, 4, 0, Math.PI * 2);
+                    ctx.arc(x + 15, y + 10, 6, 0, Math.PI * 2);
+                    ctx.arc(x + 8, y + 18, 5, 0, Math.PI * 2);
+                    ctx.arc(x + 20, y + 20, 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else if (type === 4 && layer === 'ground') {
+                    // --- River ---
+                    ctx.fillStyle = '#2980b9'; // Base blue
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#3498db'; // Wave lines
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 4, y + 8);
+                    ctx.lineTo(x + 12, y + 8);
+                    ctx.moveTo(x + 14, y + 16);
+                    ctx.lineTo(x + 22, y + 16);
+                    ctx.stroke();
                 }
             }
         }
@@ -251,20 +312,24 @@ export class Map {
         }
     }
 
-    public collides(x: number, y: number, w: number, h: number): boolean {
-        if (x < 0 || x + w > COLS * TILE_SIZE || y < 0 || y + h > ROWS * TILE_SIZE) {
-            return true;
-        }
+    public collides(x: number, y: number, w: number, h: number, isBullet: boolean = false): boolean {
+        // Bounds
+        if (x < 0 || y < 0 || x + w > COLS * TILE_SIZE || y + h > ROWS * TILE_SIZE) return true;
 
-        const startCol = Math.floor(x / TILE_SIZE);
-        const endCol = Math.floor((x + w - 0.1) / TILE_SIZE);
-        const startRow = Math.floor(y / TILE_SIZE);
-        const endRow = Math.floor((y + h - 0.1) / TILE_SIZE);
+        const c1 = Math.floor(x / TILE_SIZE);
+        const r1 = Math.floor(y / TILE_SIZE);
+        const c2 = Math.floor((x + w - 0.1) / TILE_SIZE); // -0.1 to avoid edge case
+        const r2 = Math.floor((y + h - 0.1) / TILE_SIZE);
 
-        for (let r = startRow; r <= endRow; r++) {
-            for (let c = startCol; c <= endCol; c++) {
-                const type = this.grid[r][c];
-                if (type === 1 || type === 2) {
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                    const type = this.grid[r][c];
+                    // 1: brick, 2: steel
+                    if (type === 1 || type === 2) return true;
+                    // 4: river blocks movements (tanks), but not bullets
+                    if (!isBullet && type === 4) return true;
+                } else {
                     return true;
                 }
             }

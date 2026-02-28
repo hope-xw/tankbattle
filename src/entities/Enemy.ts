@@ -83,7 +83,7 @@ export class Enemy extends Tank {
     public destroy() {
         // Drop power-up if this enemy is a carrier
         if (this.hasPowerUp) {
-            const types: PowerUpType[] = ['star', 'shield', 'timer', 'grenade', 'shovel', 'life'];
+            const types: PowerUpType[] = ['star', 'shield', 'timer', 'grenade', 'shovel', 'life', 'grapefruit'];
             const type = types[Math.floor(Math.random() * types.length)];
             // Place on a random open area
             const px = Math.random() * (this.game.map.grid[0].length * 25 - 60) + 30;

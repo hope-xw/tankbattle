@@ -34,7 +34,7 @@ export class Bullet extends Entity {
             return;
         }
         // Map bounds checking
-        if (this.game.map.collides(this.x, this.y, this.width, this.height)) {
+        if (this.game.map.collides(this.x, this.y, this.width, this.height, true)) {
             AudioEngine.playHitWall();
             this.destroy();
             return;

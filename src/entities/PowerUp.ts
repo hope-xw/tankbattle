@@ -1,7 +1,7 @@
 import { Game } from '../core/Game';
 import { Entity } from './Entity';
 
-export type PowerUpType = 'star' | 'shield' | 'timer' | 'grenade' | 'shovel' | 'life';
+export type PowerUpType = 'star' | 'shield' | 'timer' | 'grenade' | 'shovel' | 'life' | 'grapefruit';
 
 const POWERUP_COLORS: Record<PowerUpType, string> = {
     star: '#d3a339',
@@ -10,6 +10,7 @@ const POWERUP_COLORS: Record<PowerUpType, string> = {
     grenade: '#c0392b',
     shovel: '#8b6914',
     life: '#e74c3c',
+    grapefruit: '#FF5E7E', // vivid pink/grapefruit color
 };
 
 const POWERUP_LABELS: Record<PowerUpType, string> = {
@@ -19,6 +20,7 @@ const POWERUP_LABELS: Record<PowerUpType, string> = {
     grenade: 'B',
     shovel: 'W',
     life: '+',
+    grapefruit: 'GF',
 };
 
 export class PowerUp extends Entity {
