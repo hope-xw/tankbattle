@@ -3,6 +3,7 @@ import { Entity } from './Entity';
 import { Bullet } from './Bullet';
 import { Particle } from './Particle';
 import { AudioEngine } from '../core/Audio';
+import { SpriteManager } from '../core/SpriteManager';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -21,10 +22,30 @@ export abstract class Tank extends Entity {
         this.zIndex = 5;
     }
 
+    // Animation states
+    public currentFrame: number = 0;
+    public frameTimer: number = 0;
+    public isFiring: boolean = false;
+    private frameInterval: number = 400 / 8;
+
     public update(dt: number) {
         if (this.cooldown > 0) {
             this.cooldown -= dt;
         }
+
+        // Sprite animation update
+        if (this.isFiring) {
+            this.frameTimer += dt;
+            if (this.frameTimer >= this.frameInterval) {
+                this.frameTimer = 0;
+                this.currentFrame++;
+                if (this.currentFrame >= 8) {
+                    this.isFiring = false;
+                    this.currentFrame = 0;
+                }
+            }
+        }
+
         // Power-up timers
         if (this.powerUpTimers.star > 0) {
             this.powerUpTimers.star -= dt;
@@ -84,6 +105,12 @@ export abstract class Tank extends Entity {
         if (this.cooldown <= 0) {
             this.cooldown = this.fireRate;
             AudioEngine.playShoot();
+
+            // Trigger animation
+            this.isFiring = true;
+            this.currentFrame = 1; // skip 0 (idle)
+            this.frameTimer = 0;
+
             let bx = this.x;
             let by = this.y;
             const bSize = 6;
@@ -107,11 +134,6 @@ export abstract class Tank extends Entity {
     }
 
     public draw(ctx: CanvasRenderingContext2D) {
-        // Player 1 (Yellow) vs Enemy (Green/Grey)
-        const primaryColor = this.isEnemy ? (this.width > 30 ? '#5a6255' : '#4a5b42') : '#d3a339';
-        const darkColor = this.isEnemy ? '#3a4235' : '#8b6914';
-        const shadowColor = 'rgba(0,0,0,0.5)';
-
         ctx.save();
         ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
 
@@ -119,121 +141,45 @@ export abstract class Tank extends Entity {
         else if (this.dir === 'down') ctx.rotate(Math.PI);
         else if (this.dir === 'left') ctx.rotate(-Math.PI / 2);
 
-        // Shrink visual size to 80% to fit better inside the 50x50 hit box
-        ctx.scale(0.8, 0.8);
-
-        // --- Drop Shadow ---
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = shadowColor;
-        ctx.shadowOffsetX = 4;
-        ctx.shadowOffsetY = 4;
-
-        // --- Tracks (Left and Right) ---
-        ctx.fillStyle = '#1c1b18';
-        // Left track
-        ctx.fillRect(-this.width / 2, -this.height / 2 + 2, 8, this.height - 4);
-        // Right track
-        ctx.fillRect(this.width / 2 - 8, -this.height / 2 + 2, 8, this.height - 4);
-        ctx.shadowBlur = 0; // Turn off shadow for inner details
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-
-        // Track treads (Pseudo-3D ridges)
-        const offset = ((this.x + this.y) % 10) / 2;
-        for (let i = 0; i < this.height - 4; i += 4) {
-            const treadY = -this.height / 2 + 2 + ((i + offset) % (this.height - 4));
-
-            // Tread highlight
-            ctx.fillStyle = '#3a3a3a';
-            ctx.fillRect(-this.width / 2, treadY, 8, 1.5);
-            ctx.fillRect(this.width / 2 - 8, treadY, 8, 1.5);
-
-            // Tread shadow
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(-this.width / 2, treadY + 1.5, 8, 2.5);
-            ctx.fillRect(this.width / 2 - 8, treadY + 1.5, 8, 2.5);
+        // Render Sprite depending on type
+        // Note: the original sprites were drawn facing up.
+        // We crop the 1/8th frame. Each sprite sheet is 2048x2048, so one frame is 256x2048.
+        let spriteKey = 'player_tank';
+        if (this.isEnemy) {
+            // In Enemy.ts, we could distinguish type, but for now fallback to green.
+            // (We'll override this logic slightly in Enemy subclass if needed).
+            spriteKey = (this as any).enemyType === 'fast' ? 'enemy_gray' : 'enemy_green';
         }
 
-        // --- Main Chassis ---
-        const grad = ctx.createLinearGradient(0, -this.height / 2, 0, this.height / 2);
-        grad.addColorStop(0, primaryColor);
-        grad.addColorStop(1, darkColor);
+        // Ally uses player tank sprite but maybe with tint if wanted, for now just reuse player tank
+        if ((this as any).isAlly) {
+            spriteKey = 'player_tank';
+        }
 
-        ctx.fillStyle = grad;
-        // Chipped paint & rust edges
-        ctx.strokeStyle = '#2d281e';
-        ctx.lineWidth = 1;
+        const img = SpriteManager.getInstance().get(spriteKey);
 
-        ctx.beginPath();
-        ctx.moveTo(-this.width / 2 + 6, -this.height / 2 + 6);
-        ctx.lineTo(this.width / 2 - 6, -this.height / 2 + 6);
-        ctx.lineTo(this.width / 2 - 4, this.height / 2 - 4);
-        ctx.lineTo(-this.width / 2 + 4, this.height / 2 - 4);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        // Ensure image is loaded before drawing to avoid errors
+        if (img && img.width > 0) {
+            const frameW = img.width / 8;
+            const frameH = img.height;
 
-        // Inner bevel highlight
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(-this.width / 2 + 7, this.height / 2 - 5);
-        ctx.lineTo(-this.width / 2 + 7, -this.height / 2 + 7);
-        ctx.lineTo(this.width / 2 - 7, -this.height / 2 + 7);
-        ctx.stroke();
+            // We scale the extremely vertical 256x2048 image down to fit roughly in the 50x50 block,
+            // while preserving its aspect ratio. The image has a huge gun/smoke that extends way above,
+            // so we center the base chassis in the 50x50 tile.
+            // Visually in the asset, the chassis is at the bottom.
+            const drawW = this.width * 1.5; // Slightly oversized for effect
+            const drawH = drawW * (frameH / frameW);
 
-        // Inner bevel shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.beginPath();
-        ctx.moveTo(this.width / 2 - 7, -this.height / 2 + 7);
-        ctx.lineTo(this.width / 2 - 5, this.height / 2 - 5);
-        ctx.lineTo(-this.width / 2 + 7, this.height / 2 - 5);
-        ctx.stroke();
+            // Offset the drawing upwards because the bottom part contains the chassis
+            const drawX = -drawW / 2;
+            const drawY = -drawH + (this.height * 0.75);
 
-        // Weathering / Rust spots
-        ctx.fillStyle = 'rgba(60, 30, 8, 0.4)';
-        ctx.fillRect(-this.width / 2 + 8, -this.height / 2 + 8, 6, 4);
-        ctx.fillRect(this.width / 2 - 10, this.height / 2 - 12, 4, 6);
-
-        // --- Turret ---
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = 'rgba(0,0,0,0.7)';
-        ctx.shadowOffsetY = 3;
-
-        const turretRadius = this.width / 3.5;
-        const turretGrad = ctx.createRadialGradient(-turretRadius / 3, -turretRadius / 3, 2, 0, 0, turretRadius);
-        turretGrad.addColorStop(0, '#ffffff'); // Specular highlight
-        turretGrad.addColorStop(0.2, primaryColor);
-        turretGrad.addColorStop(1, darkColor);
-
-        ctx.fillStyle = turretGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, turretRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-
-        ctx.strokeStyle = '#222';
-        ctx.lineWidth = 1;
-        ctx.stroke(); // turret outline
-
-        // Commander Hatch
-        ctx.fillStyle = darkColor;
-        ctx.beginPath();
-        ctx.arc(-2, -2, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // --- Gun Barrel ---
-        const gunGrad = ctx.createLinearGradient(-2, 0, 2, 0); // Sideways gradient for cylinder effect
-        gunGrad.addColorStop(0, '#222');
-        gunGrad.addColorStop(0.5, '#888'); // Top reflection
-        gunGrad.addColorStop(1, '#111');
-        ctx.fillStyle = gunGrad;
-
-        // Barrel base
-        ctx.fillRect(-2, -this.height / 2 - 4, 4, 10);
-        // Barrel extension
-        ctx.fillRect(-1, -this.height / 2 - 8, 2, 8);
+            ctx.drawImage(img, this.currentFrame * frameW, 0, frameW, frameH, drawX, drawY, drawW, drawH);
+        } else {
+            // Fallback rectangle if image fails or isn't loaded yet
+            ctx.fillStyle = this.isEnemy ? 'red' : 'yellow';
+            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+        }
 
         ctx.restore();
 
