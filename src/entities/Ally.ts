@@ -139,20 +139,20 @@ export class Ally extends Tank {
 
         // Pink/Grapefruit chassis
         ctx.fillStyle = '#FF5E7E';
-        ctx.fillRect(-20, -20, 40, 40);
+        ctx.fillRect(-25, -25, 50, 50);
 
         // Tracks (darker pink/red)
         ctx.fillStyle = '#A31F3A';
-        ctx.fillRect(-20, -20, 8, 40);
-        ctx.fillRect(12, -20, 8, 40);
+        ctx.fillRect(-25, -25, 10, 50);
+        ctx.fillRect(15, -25, 10, 50);
 
         // Core / Turret (bright white/pink)
         ctx.fillStyle = '#FFF0F5';
-        ctx.fillRect(-10, -10, 20, 20);
+        ctx.fillRect(-12.5, -12.5, 25, 25);
 
         // Cannon barrel
         ctx.fillStyle = '#FF5E7E';
-        ctx.fillRect(-2, -25, 4, 15);
+        ctx.fillRect(-2.5, -31, 5, 18);
 
         ctx.restore();
 

@@ -17,7 +17,7 @@ export abstract class Tank extends Entity {
     public powerUpTimers: { star: number; shield: number } = { star: 0, shield: 0 };
 
     constructor(game: Game, x: number, y: number) {
-        super(game, x, y, 40, 40);
+        super(game, x, y, 50, 50);
         this.zIndex = 5;
     }
 
