@@ -1,5 +1,6 @@
 {
   "name": "tankworld",
+  "homepage": "https://hope-xw.github.io/tankbattle/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
