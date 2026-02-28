@@ -80,9 +80,9 @@ export class Map {
                 if (type === 0) continue;
 
                 ctx.save();
-                // Shrink all terrain visually (bricks, steel, bush, river) by 15%
+                // Shrink terrain visually by 4% to create a crisp 1-pixel gap (0.96 * 25 = 24)
                 ctx.translate(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-                ctx.scale(0.85, 0.85);
+                ctx.scale(0.96, 0.96);
                 ctx.translate(-(x + TILE_SIZE / 2), -(y + TILE_SIZE / 2));
 
                 if (type === 1 && layer === 'ground') {
