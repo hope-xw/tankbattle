@@ -10,8 +10,11 @@ export const COLS = 26;
 
 export class Map {
     public grid: number[][] = [];
+    public decals: Array<{ x: number, y: number, type: 'crater' | 'rubble' | 'destroyed_tank' }> = [];
     public baseAlive: boolean = true;
     private game: Game;
+    // Cache for static background noise
+    private bgCanvas?: HTMLCanvasElement;
 
     constructor(game: Game) {
         this.game = game;
@@ -19,6 +22,7 @@ export class Map {
 
     public loadLevel() {
         this.grid = [];
+        this.decals = [];
         this.baseAlive = true;
 
         const stage = this.game.stage;
@@ -81,6 +85,124 @@ export class Map {
                 this.grid[currR][currC] = type;
             }
         }
+
+        // Generate non-colliding decals (scenery)
+        const numDecals = 15 + stage * 2;
+        for (let i = 0; i < numDecals; i++) {
+            let cx = Math.random() * (COLS * TILE_SIZE);
+            let cy = Math.random() * (ROWS * TILE_SIZE);
+
+            // Avoid placing decals exactly on the base
+            if (cx > 10 * TILE_SIZE && cx < 16 * TILE_SIZE && cy > 22 * TILE_SIZE) continue;
+
+            const rand = Math.random();
+            let dType: 'crater' | 'rubble' | 'destroyed_tank' = 'crater';
+            if (rand < 0.2) dType = 'destroyed_tank';
+            else if (rand < 0.5) dType = 'rubble';
+
+            this.decals.push({ x: cx, y: cy, type: dType });
+        }
+    }
+
+    public drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
+        // 1. Base Soil Gradient (Vignette)
+        const radGrad = ctx.createRadialGradient(width / 2, height / 2, height / 4, width / 2, height / 2, width);
+        radGrad.addColorStop(0, '#1a1612'); // Dry earth center
+        radGrad.addColorStop(1, '#080706'); // Deep dark edges
+        ctx.fillStyle = radGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        // 2. Static Noise / Grit Layer (Performance cached)
+        if (!this.bgCanvas || this.bgCanvas.width !== width) {
+            this.bgCanvas = document.createElement('canvas');
+            this.bgCanvas.width = width;
+            this.bgCanvas.height = height;
+            const bctx = this.bgCanvas.getContext('2d')!;
+
+            // Draw sparse dirt/gravel pixels
+            bctx.fillStyle = 'rgba(70, 50, 30, 0.4)';
+            for (let i = 0; i < (width * height) / 200; i++) {
+                const nx = Math.random() * width;
+                const ny = Math.random() * height;
+                const s = Math.random() * 2 + 1;
+                bctx.fillRect(nx, ny, s, s);
+            }
+            // Draw deep cracks
+            bctx.strokeStyle = 'rgba(10, 8, 5, 0.5)';
+            bctx.lineWidth = 1;
+            for (let i = 0; i < 30; i++) {
+                bctx.beginPath();
+                let curX = Math.random() * width;
+                let curY = Math.random() * height;
+                bctx.moveTo(curX, curY);
+                for (let seg = 0; seg < 5; seg++) {
+                    curX += (Math.random() - 0.5) * 30;
+                    curY += (Math.random() - 0.5) * 30;
+                    bctx.lineTo(curX, curY);
+                }
+                bctx.stroke();
+            }
+        }
+        ctx.drawImage(this.bgCanvas, 0, 0);
+
+        // 3. Draw Decals (Craters, Wrecks) underneath entities
+        this.decals.forEach(d => {
+            ctx.save();
+            ctx.translate(d.x, d.y);
+
+            if (d.type === 'crater') {
+                // Scorched earth crater
+                const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, 15);
+                grad.addColorStop(0, '#050403');
+                grad.addColorStop(0.6, 'rgba(20, 15, 10, 0.8)');
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
+
+                // Inner dark hole
+                ctx.fillStyle = '#020101';
+                ctx.beginPath(); ctx.arc(2, 2, 6, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (d.type === 'rubble') {
+                // Scattered destroyed bricks/concrete
+                ctx.fillStyle = '#4a2612'; // brick color
+                ctx.fillRect(-8, -5, 6, 4);
+                ctx.fillRect(4, 2, 5, 5);
+                ctx.fillStyle = '#3a3d38'; // concrete color
+                ctx.fillRect(-2, 6, 8, 4);
+                // Ash shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(-3, 8, 9, 3);
+            }
+            else if (d.type === 'destroyed_tank') {
+                // Burnt out tank chassis
+                ctx.rotate(d.x % Math.PI); // random angle based on pos
+
+                // Track char marks
+                ctx.fillStyle = '#0a0908';
+                ctx.fillRect(-18, -15, 8, 30);
+                ctx.fillRect(10, -15, 8, 30);
+
+                // Chassis shell
+                ctx.fillStyle = '#141514';
+                ctx.fillRect(-14, -12, 28, 24);
+
+                // Broken turret
+                ctx.fillStyle = '#0d0d0c';
+                ctx.beginPath(); ctx.arc(-2, 4, 8, 0, Math.PI * 2); ctx.fill();
+                // Broken barrel
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(-2, 4); ctx.lineTo(-15, -10); ctx.stroke();
+
+                // Glowing embers
+                ctx.fillStyle = 'rgba(255, 60, 0, 0.6)';
+                ctx.fillRect(-5, -5, 3, 2);
+                ctx.fillRect(6, 8, 2, 2);
+            }
+
+            ctx.restore();
+        });
     }
 
     public draw(ctx: CanvasRenderingContext2D, layer: 'ground' | 'bush' = 'ground') {

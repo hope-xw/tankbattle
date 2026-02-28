@@ -4,8 +4,8 @@ import { Entity } from './Entity';
 export type ParticleType = 'circle' | 'rect' | 'spark' | 'smoke';
 
 export class Particle extends Entity {
-    private vx: number;
-    private vy: number;
+    public vx: number;
+    public vy: number;
     private life: number;
     private maxLife: number;
     private color: string;

@@ -6,6 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { Tank } from '../entities/Tank';
 import { PowerUp } from '../entities/PowerUp';
 import { Ally } from '../entities/Ally';
+import { Particle } from '../entities/Particle';
 import { AudioEngine } from './Audio';
 
 export class Game {
@@ -147,6 +148,27 @@ export class Game {
             }
         }
 
+        // Spawn ambient smoke from destroyed tank decals
+        this.map.decals.forEach(d => {
+            if (d.type === 'destroyed_tank' && Math.random() < 0.05) {
+                // Spawn a dark grey/black smoke particle that drifts upwards
+                const smokeColors = ['rgba(20,20,20,0.8)', 'rgba(40,40,40,0.6)', 'rgba(60,60,60,0.5)'];
+                const p = new Particle(
+                    this,
+                    d.x + (Math.random() * 20 - 10),
+                    d.y + (Math.random() * 20 - 10),
+                    smokeColors[Math.floor(Math.random() * 3)],
+                    2 + Math.random() * 2, // size
+                    1.5 + Math.random(), // duration
+                    'smoke'
+                );
+                // Override velocity to drift slowly up
+                p.vx = (Math.random() - 0.5) * 5;
+                p.vy = -10 - Math.random() * 10;
+                this.addEntity(p);
+            }
+        });
+
         for (let i = this.entities.length - 1; i >= 0; i--) {
             const e = this.entities[i];
             // Skip enemy updates when frozen
@@ -265,9 +287,10 @@ export class Game {
         ctx.clip();
         ctx.translate(this.offsetX, this.offsetY);
 
-        ctx.fillStyle = '#0f0e0d';
-        ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
+        // 2.a Dynamic textured wasteland background
+        this.map.drawBackground(ctx, this.gameWidth, this.gameHeight);
 
+        // 2.b Level Objects (Ground Layer: Brick, Steel, River)
         this.map.draw(ctx, 'ground');
 
         this.entities.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
