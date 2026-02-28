@@ -19,6 +19,7 @@ export class Game {
     public player!: Player;
     public score: number = 0;
     public enemiesRemaining: number = 20;
+    public enemiesToSpawn: number = 20;
     public frozenTimer: number = 0;
     public shovelTimer: number = 0;
     public stage: number = 1;
@@ -58,6 +59,7 @@ export class Game {
     private reset(stageNum: number = 1) {
         this.entities = [];
         this.enemiesRemaining = 20; // Or formula: 15 + stageNum * 5
+        this.enemiesToSpawn = this.enemiesRemaining;
         this.frozenTimer = 0;
         this.shovelTimer = 0;
         this.stage = stageNum;
@@ -75,6 +77,8 @@ export class Game {
     }
 
     public spawnEnemy(x: number, y: number, hasPowerUp: boolean = false) {
+        if (this.enemiesToSpawn <= 0) return;
+        this.enemiesToSpawn--;
         this.addEntity(new Enemy(this, x, y, hasPowerUp));
     }
 
