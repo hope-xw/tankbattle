@@ -31,8 +31,6 @@ export class Game {
     public readonly offsetX: number;
     public readonly offsetY: number;
 
-    public dt: number = 0; // Expose delta time for sprites
-
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;

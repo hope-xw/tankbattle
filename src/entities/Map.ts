@@ -1,7 +1,6 @@
 import { Game } from '../core/Game';
 import { Particle } from './Particle';
 import { AudioEngine } from '../core/Audio';
-import { SpriteManager } from '../core/SpriteManager';
 
 export const TILE_SIZE = 25;
 export const ROWS = 26;
@@ -13,7 +12,6 @@ export class Map {
     public grid: number[][] = [];
     public decals: Array<{ x: number, y: number, type: 'crater' | 'rubble' | 'destroyed_tank' }> = [];
     public baseAlive: boolean = true;
-    public baseDestroyTimer: number = 0;
     private game: Game;
     // Cache for static background noise
     private bgCanvas?: HTMLCanvasElement;
@@ -592,39 +590,21 @@ export class Map {
             ctx.fill();
 
         } else {
-            // Destroyed Base (Sprite Animation)
-            const img = SpriteManager.getInstance().get('base_explosion');
-
-            // Frame calculation: 8 frames, playing out over ~1.6 seconds (200ms per frame)
-            this.baseDestroyTimer += this.game.dt; // We need dt, Map doesn't get update(dt) directly but we can use game.dt 
-            const frameDuration = 200;
-            const maxFrames = 8;
-            let currentFrame = Math.floor(this.baseDestroyTimer / frameDuration);
-
-            // Hold on the last frame
-            if (currentFrame >= maxFrames) {
-                currentFrame = maxFrames - 1;
-            }
-
-            if (img && img.width > 0) {
-                const frameW = img.width / 8;
-                const frameH = img.height;
-
-                // The hole sprite is heavily textured, let's draw it spanning the whole 2x2 grid (50x50) 
-                // It actually looks like it should be slightly larger to cover the sandbags
-                const drawSize = TILE_SIZE * 2.5;
-                const offset = (drawSize - TILE_SIZE * 2) / 2;
-
-                ctx.drawImage(img, currentFrame * frameW, 0, frameW, frameH, baseX - offset, baseY - offset, drawSize, drawSize);
-            } else {
-                // Fallback
-                ctx.fillStyle = '#2a2825';
-                ctx.fillRect(baseX - 8, baseY - 8, TILE_SIZE * 2 + 16, TILE_SIZE * 2 + 16);
-                ctx.fillStyle = '#111';
-                ctx.beginPath();
-                ctx.arc(baseX + TILE_SIZE, baseY + TILE_SIZE, TILE_SIZE - 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            // Destroyed Base (Rubble crater)
+            ctx.fillStyle = '#2a2825';
+            ctx.fillRect(baseX - 8, baseY - 8, TILE_SIZE * 2 + 16, TILE_SIZE * 2 + 16);
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(baseX + TILE_SIZE, baseY + TILE_SIZE, TILE_SIZE - 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(baseX + 10, baseY + 10);
+            ctx.lineTo(baseX + 30, baseY + 40);
+            ctx.moveTo(baseX + 40, baseY + 15);
+            ctx.lineTo(baseX + 15, baseY + 45);
+            ctx.stroke();
         }
     }
 
