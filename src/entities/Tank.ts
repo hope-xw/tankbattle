@@ -119,6 +119,9 @@ export abstract class Tank extends Entity {
         else if (this.dir === 'down') ctx.rotate(Math.PI);
         else if (this.dir === 'left') ctx.rotate(-Math.PI / 2);
 
+        // Shrink visual size to 80% to fit better inside the 50x50 hit box
+        ctx.scale(0.8, 0.8);
+
         // --- Drop Shadow ---
         ctx.shadowBlur = 10;
         ctx.shadowColor = shadowColor;
