@@ -40,32 +40,45 @@ export class Map {
             this.grid[23][c] = 1; // Top wall (row 23)
         }
 
-        // Fill with random obstacles based on stage using 2x2 logic
-        for (let r = 2; r < ROWS - 2; r += 2) {     // Leave top 2 rows and bottom clear for spawns
-            for (let c = 2; c < COLS - 2; c += 2) {
-                // Keep center column somewhat clear for flow
-                if (c >= 10 && c <= 15 && r >= 20) continue;
+        // Generate random map clusters based on stage
+        const numClusters = 40 + stage * 5;
+        for (let i = 0; i < numClusters; i++) {
+            let r = 2 + Math.floor(Math.random() * (ROWS - 6));
+            let c = 2 + Math.floor(Math.random() * (COLS - 6));
 
-                // Keep enemy spawn blocks clear
-                if (r < 4 && (c < 4 || c > COLS - 5 || (c > 10 && c < 16))) continue;
+            // 40% horizontal, 40% vertical, 20% 2x2 block
+            let shape = Math.random();
+            let len = 2 + Math.floor(Math.random() * 4); // 2 to 5 tiles long
+            if (shape >= 0.8) len = 4; // fixed 4 for the 2x2 box shape
 
-                if (Math.random() < 0.3) {
-                    let type = 1;
-                    // Start rendering Bush at Stage 2+, River at Stage 3+
-                    if (stage >= 3 && Math.random() < 0.15) {
-                        type = 4; // River
-                    } else if (stage >= 2 && Math.random() < 0.2) {
-                        type = 3; // Bush
-                    } else if (Math.random() < 0.1 + (stage * 0.02)) {
-                        type = 2; // Steel
-                    }
+            let type = 1;
+            // Start rendering Bush at Stage 2+, River at Stage 3+
+            if (stage >= 3 && Math.random() < 0.15) {
+                type = 4; // River
+            } else if (stage >= 2 && Math.random() < 0.2) {
+                type = 3; // Bush
+            } else if (Math.random() < 0.1 + (stage * 0.02)) {
+                type = 2; // Steel
+            }
 
-                    // Assign 2x2 block
-                    this.grid[r][c] = type;
-                    this.grid[r + 1][c] = type;
-                    this.grid[r][c + 1] = type;
-                    this.grid[r + 1][c + 1] = type;
+            for (let j = 0; j < len; j++) {
+                let currR = r;
+                let currC = c;
+
+                if (shape < 0.4) {
+                    currC += j; // Horizontal line
+                } else if (shape < 0.8) {
+                    currR += j; // Vertical line
+                } else {
+                    currC += (j % 2); // 2x2 box
+                    currR += Math.floor(j / 2);
                 }
+
+                // Protect paths (keep center and spawn clear)
+                if (currC >= 10 && currC <= 15 && currR >= 20) continue;
+                if (currR < 4 && (currC < 4 || currC > COLS - 5 || (currC > 10 && currC < 16))) continue;
+
+                this.grid[currR][currC] = type;
             }
         }
     }
