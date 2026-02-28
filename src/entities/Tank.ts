@@ -138,13 +138,20 @@ export abstract class Tank extends Entity {
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-        // Track treads
-        ctx.fillStyle = '#0a0a09';
+        // Track treads (Pseudo-3D ridges)
         const offset = ((this.x + this.y) % 10) / 2;
         for (let i = 0; i < this.height - 4; i += 4) {
             const treadY = -this.height / 2 + 2 + ((i + offset) % (this.height - 4));
-            ctx.fillRect(-this.width / 2, treadY, 8, 2);
-            ctx.fillRect(this.width / 2 - 8, treadY, 8, 2);
+
+            // Tread highlight
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(-this.width / 2, treadY, 8, 1.5);
+            ctx.fillRect(this.width / 2 - 8, treadY, 8, 1.5);
+
+            // Tread shadow
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(-this.width / 2, treadY + 1.5, 8, 2.5);
+            ctx.fillRect(this.width / 2 - 8, treadY + 1.5, 8, 2.5);
         }
 
         // --- Main Chassis ---
@@ -166,21 +173,48 @@ export abstract class Tank extends Entity {
         ctx.fill();
         ctx.stroke();
 
+        // Inner bevel highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-this.width / 2 + 7, this.height / 2 - 5);
+        ctx.lineTo(-this.width / 2 + 7, -this.height / 2 + 7);
+        ctx.lineTo(this.width / 2 - 7, -this.height / 2 + 7);
+        ctx.stroke();
+
+        // Inner bevel shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(this.width / 2 - 7, -this.height / 2 + 7);
+        ctx.lineTo(this.width / 2 - 5, this.height / 2 - 5);
+        ctx.lineTo(-this.width / 2 + 7, this.height / 2 - 5);
+        ctx.stroke();
+
         // Weathering / Rust spots
         ctx.fillStyle = 'rgba(60, 30, 8, 0.4)';
         ctx.fillRect(-this.width / 2 + 8, -this.height / 2 + 8, 6, 4);
         ctx.fillRect(this.width / 2 - 10, this.height / 2 - 12, 4, 6);
 
         // --- Turret ---
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = 'rgba(0,0,0,0.6)';
-        ctx.shadowOffsetY = 2;
-        ctx.fillStyle = primaryColor;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowOffsetY = 3;
+
+        const turretRadius = this.width / 3.5;
+        const turretGrad = ctx.createRadialGradient(-turretRadius / 3, -turretRadius / 3, 2, 0, 0, turretRadius);
+        turretGrad.addColorStop(0, '#ffffff'); // Specular highlight
+        turretGrad.addColorStop(0.2, primaryColor);
+        turretGrad.addColorStop(1, darkColor);
+
+        ctx.fillStyle = turretGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, this.width / 3.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, turretRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
+
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1;
         ctx.stroke(); // turret outline
 
         // Commander Hatch
@@ -190,7 +224,12 @@ export abstract class Tank extends Entity {
         ctx.fill();
 
         // --- Gun Barrel ---
-        ctx.fillStyle = '#4a4d4a';
+        const gunGrad = ctx.createLinearGradient(-2, 0, 2, 0); // Sideways gradient for cylinder effect
+        gunGrad.addColorStop(0, '#222');
+        gunGrad.addColorStop(0.5, '#888'); // Top reflection
+        gunGrad.addColorStop(1, '#111');
+        ctx.fillStyle = gunGrad;
+
         // Barrel base
         ctx.fillRect(-2, -this.height / 2 - 4, 4, 10);
         // Barrel extension

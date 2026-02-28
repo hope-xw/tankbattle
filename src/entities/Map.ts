@@ -95,105 +95,149 @@ export class Map {
                 ctx.save();
 
                 if (type === 1 && layer === 'ground') {
-                    // --- Brick Wall Segment (Wasteland style) ---
-                    // Base clay color
-                    ctx.fillStyle = '#8b4513';
+                    // --- 3D Brick Wall Segment ---
+                    ctx.fillStyle = '#6b320d'; // Darker mortar base
                     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                    // Brick mortar lines
-                    ctx.strokeStyle = '#3c1e08';
-                    ctx.lineWidth = 1;
-                    for (let i = 0; i < 4; i++) {
-                        let by = y + i * (TILE_SIZE / 4);
-                        ctx.beginPath();
-                        ctx.moveTo(x, by);
-                        ctx.lineTo(x + TILE_SIZE, by);
-                        ctx.stroke();
-                        // Vertical mortar
-                        let xOffset = (i % 2 === 0) ? TILE_SIZE / 2 : TILE_SIZE / 4;
-                        ctx.beginPath();
-                        ctx.moveTo(x + xOffset, by);
-                        ctx.lineTo(x + xOffset, by + TILE_SIZE / 4);
-                        if (i % 2 !== 0) {
-                            ctx.moveTo(x + xOffset + TILE_SIZE / 2, by);
-                            ctx.lineTo(x + xOffset + TILE_SIZE / 2, by + TILE_SIZE / 4);
+                    const brickH = TILE_SIZE / 4;
+                    const brickW = TILE_SIZE / 2;
+
+                    for (let row = 0; row < 4; row++) {
+                        const rowY = y + row * brickH;
+                        const offset = (row % 2 === 0) ? 0 : -brickW / 2;
+
+                        for (let col = 0; col < 3; col++) {
+                            const bx = x + offset + col * brickW;
+                            if (bx > x + TILE_SIZE - 1 || bx + brickW < x) continue; // Skip out of bounds
+
+                            // Clip the brick to the tile boundary
+                            const drawX = Math.max(x, bx);
+                            const drawW = Math.min(x + TILE_SIZE - drawX, brickW - (drawX - bx));
+
+                            // Brick base color
+                            ctx.fillStyle = '#8b4513';
+                            ctx.fillRect(drawX, rowY, drawW, brickH - 1);
+
+                            // Brick highlight (Top and Left)
+                            ctx.fillStyle = 'rgba(255, 170, 100, 0.3)';
+                            ctx.fillRect(drawX, rowY, drawW, 1);
+                            ctx.fillRect(drawX, rowY, 1, brickH - 1);
+
+                            // Brick shadow (Bottom and Right)
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                            ctx.fillRect(drawX, rowY + brickH - 2, drawW, 1);
+                            ctx.fillRect(drawX + drawW - 1, rowY, 1, brickH - 1);
                         }
-                        ctx.stroke();
                     }
-                    // Weathering / Shadow
-                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                    ctx.fillRect(x, y + TILE_SIZE - 4, TILE_SIZE, 4);
 
                 } else if (type === 2 && layer === 'ground') {
-                    // --- Concrete Road Barrier ---
-                    // Base ash gray
-                    ctx.fillStyle = '#6b6e6b';
-                    ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                    // Top highlight (sloped barrier)
-                    ctx.fillStyle = '#8f928e';
-                    ctx.beginPath();
-                    ctx.moveTo(x + 2, y + 2);
-                    ctx.lineTo(x + TILE_SIZE - 2, y + 2);
-                    ctx.lineTo(x + TILE_SIZE - 6, y + 8);
-                    ctx.lineTo(x + 6, y + 8);
-                    ctx.fill();
-                    // Dark side / shadow
-                    ctx.fillStyle = '#424542';
-                    ctx.fillRect(x + 2, y + TILE_SIZE - 8, TILE_SIZE - 4, 6);
-                    // Barrier top rib
-                    ctx.fillStyle = '#9aa09b';
-                    ctx.fillRect(x + 8, y + 6, TILE_SIZE - 16, TILE_SIZE - 12);
+                    // --- 3D Steel Barrier ---
+                    // Diagonal metallic gradient
+                    const grad = ctx.createLinearGradient(x, y, x + TILE_SIZE, y + TILE_SIZE);
+                    grad.addColorStop(0, '#a0a5a0');
+                    grad.addColorStop(0.3, '#ffffff'); // bright shine
+                    grad.addColorStop(0.5, '#7a7e7a');
+                    grad.addColorStop(0.8, '#525552');
+                    grad.addColorStop(1, '#2a2c2a');
 
-                    // Internal bevel
-                    ctx.strokeStyle = '#8d918d'; // Highlight
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x + 2, y + TILE_SIZE - 2);
-                    ctx.lineTo(x + 2, y + 2);
-                    ctx.lineTo(x + TILE_SIZE - 2, y + 2);
-                    ctx.stroke();
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                    ctx.strokeStyle = '#4b4d4b'; // Shadow
-                    ctx.beginPath();
-                    ctx.moveTo(x + TILE_SIZE - 2, y + 2);
-                    ctx.lineTo(x + TILE_SIZE - 2, y + TILE_SIZE - 2);
-                    ctx.lineTo(x + 2, y + TILE_SIZE - 2);
-                    ctx.stroke();
+                    // Outer Bevel Highlight (Top & Left)
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.fillRect(x, y, TILE_SIZE, 2);
+                    ctx.fillRect(x, y, 2, TILE_SIZE);
 
-                    // Rebar details (exposed wire)
-                    ctx.strokeStyle = '#a65427'; // rusted rebar
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(x + TILE_SIZE / 4, y + TILE_SIZE / 4);
-                    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-                    ctx.moveTo(x + (TILE_SIZE / 4) * 3, y + TILE_SIZE / 4);
-                    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-                    ctx.stroke();
+                    // Outer Bevel Shadow (Bottom & Right)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(x, y + TILE_SIZE - 2, TILE_SIZE, 2);
+                    ctx.fillRect(x + TILE_SIZE - 2, y, 2, TILE_SIZE);
+
+                    // Inner recessed area
+                    ctx.fillStyle = '#4a4d4a';
+                    ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+
+                    // Inner bevel Shadow (Top & Left)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, 1);
+                    ctx.fillRect(x + 5, y + 5, 1, TILE_SIZE - 10);
+
+                    // Inner bevel Highlight (Bottom & Right)
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(x + 5, y + TILE_SIZE - 6, TILE_SIZE - 10, 1);
+                    ctx.fillRect(x + TILE_SIZE - 6, y + 5, 1, TILE_SIZE - 10);
+
+                    // Rivets in the 4 corners
+                    ctx.fillStyle = '#222';
+                    const rivetPos = [
+                        [x + 3, y + 3], [x + TILE_SIZE - 3, y + 3],
+                        [x + 3, y + TILE_SIZE - 3], [x + TILE_SIZE - 3, y + TILE_SIZE - 3]
+                    ];
+                    rivetPos.forEach(([rx, ry]) => {
+                        ctx.beginPath();
+                        ctx.arc(rx, ry, 1, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.fillRect(rx, ry + 1, 1, 1); // small rivet highlight
+                        ctx.fillStyle = '#222';
+                    });
 
                 } else if (type === 3 && layer === 'bush') {
-                    // --- Bush ---
-                    ctx.fillStyle = '#1e401e'; // Dark green
-                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#2d5e2d'; // Leaf highlights
-                    ctx.beginPath();
-                    ctx.arc(x + 5, y + 5, 4, 0, Math.PI * 2);
-                    ctx.arc(x + 15, y + 10, 6, 0, Math.PI * 2);
-                    ctx.arc(x + 8, y + 18, 5, 0, Math.PI * 2);
-                    ctx.arc(x + 20, y + 20, 4, 0, Math.PI * 2);
-                    ctx.fill();
+                    // --- 3D Bush ---
+                    // Draw overlapping shaded circles instead of flat ones
+                    const drawLeaf = (lx: number, ly: number, r: number) => {
+                        const lg = ctx.createRadialGradient(lx - r / 3, ly - r / 3, 1, lx, ly, r);
+                        lg.addColorStop(0, '#4cd137');
+                        lg.addColorStop(0.5, '#2d5e2d');
+                        lg.addColorStop(1, '#0c240c');
+
+                        ctx.shadowBlur = 4;
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                        ctx.shadowOffsetY = 2;
+
+                        ctx.fillStyle = lg;
+                        ctx.beginPath();
+                        ctx.arc(lx, ly, r, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.shadowBlur = 0;
+                        ctx.shadowOffsetY = 0;
+                    };
+
+                    drawLeaf(x + 6, y + 6, 6);
+                    drawLeaf(x + 19, y + 8, 7);
+                    drawLeaf(x + 9, y + 19, 8);
+                    drawLeaf(x + 20, y + 20, 6);
+                    drawLeaf(x + 12, y + 12, 9); // center covering
 
                 } else if (type === 4 && layer === 'ground') {
-                    // --- River ---
-                    ctx.fillStyle = '#2980b9'; // Base blue
+                    // --- 3D River ---
+                    const rw = ctx.createLinearGradient(x, y, x, y + TILE_SIZE);
+                    rw.addColorStop(0, '#1a5276');
+                    rw.addColorStop(0.5, '#2980b9');
+                    rw.addColorStop(1, '#154360');
+                    ctx.fillStyle = rw;
                     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#3498db'; // Wave lines
-                    ctx.lineWidth = 1.5;
+
+                    // Wave sparkles
+                    const timeOffset = Date.now() / 300 % 10;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 1;
                     ctx.beginPath();
-                    ctx.moveTo(x + 4, y + 8);
-                    ctx.lineTo(x + 12, y + 8);
-                    ctx.moveTo(x + 14, y + 16);
-                    ctx.lineTo(x + 22, y + 16);
+                    ctx.moveTo(x + 2 + (timeOffset % 4), y + 6);
+                    ctx.lineTo(x + 10 + (timeOffset % 4), y + 6);
+
+                    ctx.moveTo(x + 14 - (timeOffset % 4), y + 14);
+                    ctx.lineTo(x + 22 - (timeOffset % 4), y + 14);
+
+                    ctx.moveTo(x + 8 + (timeOffset % 5), y + 20);
+                    ctx.lineTo(x + 16 + (timeOffset % 5), y + 20);
                     ctx.stroke();
+
+                    // Water depth shadow on edges
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(x, y, TILE_SIZE, 2);
+                    ctx.fillRect(x, y + TILE_SIZE - 2, TILE_SIZE, 2);
                 }
 
                 ctx.restore();
@@ -277,9 +321,21 @@ export class Map {
             // 4. Eagle Symbol
             const cx = baseX + bw / 2;
             const cy = baseY + bh / 2;
-            ctx.fillStyle = '#d3a339';
+
+            // Metallic gradient for the eagle
+            const eagleGrad = ctx.createLinearGradient(cx - 16, cy - 16, cx + 16, cy + 16);
+            eagleGrad.addColorStop(0, '#f9ca24'); // Bright gold
+            eagleGrad.addColorStop(0.5, '#f1c40f');
+            eagleGrad.addColorStop(1, '#b8860b'); // Dark gold
+
+            ctx.fillStyle = eagleGrad;
             ctx.strokeStyle = '#8b6914';
             ctx.lineWidth = 1;
+
+            // Halo glow
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(249, 202, 36, 0.6)';
+
             // Head
             ctx.beginPath();
             ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
@@ -307,6 +363,10 @@ export class Map {
             ctx.lineTo(cx + 4, cy + 2);
             ctx.closePath();
             ctx.fill(); ctx.stroke();
+
+            // Clear shadow settings
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
             // Tail
             ctx.beginPath();
             ctx.moveTo(cx - 6, cy + 6);
