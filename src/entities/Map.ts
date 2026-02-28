@@ -15,6 +15,8 @@ export class Map {
     private game: Game;
     // Cache for static background noise
     private bgCanvas?: HTMLCanvasElement;
+    // 2D Array storing local damage intensity [0.0 - 1.0]
+    public damageMap: number[][] = [];
 
     constructor(game: Game) {
         this.game = game;
@@ -33,11 +35,18 @@ export class Map {
 
         const stage = this.game.stage;
 
-        // initialize empty
+        // initialize empty grid and damage map
+        this.damageMap = [];
         for (let r = 0; r < ROWS; r++) {
             this.grid[r] = [];
+            this.damageMap[r] = [];
             for (let c = 0; c < COLS; c++) {
                 this.grid[r][c] = 0;
+                // Generate low-frequency pseudo-noise for damage zones (0 to 1)
+                const noiseStr = Math.sin(r * 0.3) * Math.cos(c * 0.3) +
+                    Math.sin(r * 0.7 + stage) * Math.cos(c * 0.6 + stage) * 0.5;
+                // normalize to roughly 0 - 1
+                this.damageMap[r][c] = Math.max(0, Math.min(1, (noiseStr + 1.5) / 3));
             }
         }
 
@@ -92,19 +101,27 @@ export class Map {
             }
         }
 
-        // Generate non-colliding decals (scenery)
-        const numDecals = 15 + stage * 2;
-        for (let i = 0; i < numDecals; i++) {
-            let cx = Math.random() * (COLS * TILE_SIZE);
-            let cy = Math.random() * (ROWS * TILE_SIZE);
+        // Generate non-colliding decals (scenery) based on local damage
+        const numDecals = 20 + stage * 5;
+        let attempts = 0;
+        while (this.decals.length < numDecals && attempts < 500) {
+            attempts++;
+            let r = Math.floor(Math.random() * ROWS);
+            let c = Math.floor(Math.random() * COLS);
+
+            // Bias placement towards high-damage zones
+            if (Math.random() > this.damageMap[r][c]) continue;
+
+            let cx = c * TILE_SIZE + Math.random() * TILE_SIZE;
+            let cy = r * TILE_SIZE + Math.random() * TILE_SIZE;
 
             // Avoid placing decals exactly on the base
             if (cx > 10 * TILE_SIZE && cx < 16 * TILE_SIZE && cy > 22 * TILE_SIZE) continue;
 
             const rand = Math.random();
             let dType: 'crater' | 'rubble' | 'destroyed_tank' = 'crater';
-            if (rand < 0.2) dType = 'destroyed_tank';
-            else if (rand < 0.5) dType = 'rubble';
+            if (rand < 0.25) dType = 'destroyed_tank';
+            else if (rand < 0.6) dType = 'rubble';
 
             this.decals.push({ x: cx, y: cy, type: dType });
         }
@@ -147,6 +164,24 @@ export class Map {
                     bctx.lineTo(curX, curY);
                 }
                 bctx.stroke();
+            }
+
+            // Draw localized scorched earth patches based on damage map
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const dmg = this.damageMap[r][c];
+                    if (dmg > 0.6) {
+                        // High damage zone: dark scorch marks
+                        bctx.fillStyle = `rgba(0, 0, 0, ${(dmg - 0.6) * 1.5})`; // darker alpha
+                        bctx.beginPath();
+                        bctx.arc(c * TILE_SIZE + TILE_SIZE / 2, r * TILE_SIZE + TILE_SIZE / 2, TILE_SIZE * 1.5 * dmg, 0, Math.PI * 2);
+                        bctx.fill();
+                    } else if (dmg < 0.3) {
+                        // Low damage zone: slightly lighter/dustier patches
+                        bctx.fillStyle = `rgba(180, 150, 100, ${(0.3 - dmg) * 0.4})`; // dust tint
+                        bctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
             }
         }
         ctx.drawImage(this.bgCanvas, 0, 0);
@@ -238,10 +273,12 @@ export class Map {
                             const bx = x + offset + col * brickW;
                             if (bx > x + TILE_SIZE - 1 || bx + brickW < x) continue; // Skip out of bounds
 
-                            // Randomly skip some bricks for a damaged look
+                            // Randomly skip some bricks for a damaged look. 
+                            // Baseline probability heavily increased in high damage zones.
+                            const localDmg = this.damageMap[r][c];
                             const brickSeed = row * 10 + col;
                             const dmgProb = this.prng(r, c, brickSeed);
-                            if (dmgProb < 0.15) {
+                            if (dmgProb < 0.05 + (localDmg * 0.25)) {
                                 // Missing brick, reveal dark mortar
                                 continue;
                             }
@@ -250,10 +287,10 @@ export class Map {
                             const drawX = Math.max(x, bx);
                             const drawW = Math.min(x + TILE_SIZE - drawX, brickW - (drawX - bx));
 
-                            // Randomize brick color for weathered look
+                            // Randomize brick color for weathered look. Burn bricks in high damage zones.
                             let baseColor = '#8b4513';
-                            if (dmgProb > 0.8) baseColor = '#6a2a07'; // Darjer burnt brick
-                            else if (dmgProb > 0.6) baseColor = '#9c5424'; // Lighter brick
+                            if (dmgProb > 0.8 || localDmg > 0.7) baseColor = '#5e2303'; // Darker burnt brick
+                            else if (dmgProb > 0.6 && localDmg < 0.4) baseColor = '#9c5424'; // Lighter brick
 
                             // Brick base color
                             ctx.fillStyle = baseColor;
