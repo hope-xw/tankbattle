@@ -20,6 +20,12 @@ export class Map {
         this.game = game;
     }
 
+    // Pseudo-random number generator based on coordinates to keep textures stable across frames
+    private prng(r: number, c: number, seed: number = 0): number {
+        const h = Math.sin(r * 12.9898 + c * 78.233 + seed) * 43758.5453123;
+        return h - Math.floor(h);
+    }
+
     public loadLevel() {
         this.grid = [];
         this.decals = [];
@@ -232,12 +238,25 @@ export class Map {
                             const bx = x + offset + col * brickW;
                             if (bx > x + TILE_SIZE - 1 || bx + brickW < x) continue; // Skip out of bounds
 
+                            // Randomly skip some bricks for a damaged look
+                            const brickSeed = row * 10 + col;
+                            const dmgProb = this.prng(r, c, brickSeed);
+                            if (dmgProb < 0.15) {
+                                // Missing brick, reveal dark mortar
+                                continue;
+                            }
+
                             // Clip the brick to the tile boundary
                             const drawX = Math.max(x, bx);
                             const drawW = Math.min(x + TILE_SIZE - drawX, brickW - (drawX - bx));
 
+                            // Randomize brick color for weathered look
+                            let baseColor = '#8b4513';
+                            if (dmgProb > 0.8) baseColor = '#6a2a07'; // Darjer burnt brick
+                            else if (dmgProb > 0.6) baseColor = '#9c5424'; // Lighter brick
+
                             // Brick base color
-                            ctx.fillStyle = '#8b4513';
+                            ctx.fillStyle = baseColor;
                             ctx.fillRect(drawX, rowY, drawW, brickH - 1);
 
                             // Brick highlight (Top and Left)
@@ -254,19 +273,29 @@ export class Map {
 
                 } else if (type === 2 && layer === 'ground') {
                     // --- 3D Steel Barrier ---
-                    // Diagonal metallic gradient
+                    // Original Metallic Gradient
                     const grad = ctx.createLinearGradient(x, y, x + TILE_SIZE, y + TILE_SIZE);
-                    grad.addColorStop(0, '#a0a5a0');
-                    grad.addColorStop(0.3, '#ffffff'); // bright shine
-                    grad.addColorStop(0.5, '#7a7e7a');
-                    grad.addColorStop(0.8, '#525552');
-                    grad.addColorStop(1, '#2a2c2a');
+                    const isRusted = this.prng(r, c, 50) < 0.3; // 30% chance of overall rusty tint
+
+                    if (isRusted) {
+                        grad.addColorStop(0, '#857560'); // rust edge
+                        grad.addColorStop(0.3, '#d1c7b8'); // dirty shine
+                        grad.addColorStop(0.5, '#7a7063');
+                        grad.addColorStop(0.8, '#524a40');
+                        grad.addColorStop(1, '#2c251e');
+                    } else {
+                        grad.addColorStop(0, '#a0a5a0');
+                        grad.addColorStop(0.3, '#ffffff'); // bright shine
+                        grad.addColorStop(0.5, '#7a7e7a');
+                        grad.addColorStop(0.8, '#525552');
+                        grad.addColorStop(1, '#2a2c2a');
+                    }
 
                     ctx.fillStyle = grad;
                     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
                     // Outer Bevel Highlight (Top & Left)
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.fillStyle = isRusted ? 'rgba(255, 230, 200, 0.4)' : 'rgba(255, 255, 255, 0.6)';
                     ctx.fillRect(x, y, TILE_SIZE, 2);
                     ctx.fillRect(x, y, 2, TILE_SIZE);
 
@@ -276,7 +305,7 @@ export class Map {
                     ctx.fillRect(x + TILE_SIZE - 2, y, 2, TILE_SIZE);
 
                     // Inner recessed area
-                    ctx.fillStyle = '#4a4d4a';
+                    ctx.fillStyle = isRusted ? '#4a4238' : '#4a4d4a';
                     ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
 
                     // Inner bevel Shadow (Top & Left)
@@ -285,9 +314,31 @@ export class Map {
                     ctx.fillRect(x + 5, y + 5, 1, TILE_SIZE - 10);
 
                     // Inner bevel Highlight (Bottom & Right)
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillStyle = isRusted ? 'rgba(255, 230, 200, 0.2)' : 'rgba(255, 255, 255, 0.3)';
                     ctx.fillRect(x + 5, y + TILE_SIZE - 6, TILE_SIZE - 10, 1);
                     ctx.fillRect(x + TILE_SIZE - 6, y + 5, 1, TILE_SIZE - 10);
+
+                    // Add scratches/scuffs
+                    const numScratches = Math.floor(this.prng(r, c, 100) * 4);
+                    for (let s = 0; s < numScratches; s++) {
+                        const sx = x + 6 + this.prng(r, c, 101 + s) * (TILE_SIZE - 15);
+                        const sy = y + 6 + this.prng(r, c, 201 + s) * (TILE_SIZE - 15);
+                        const len = 3 + this.prng(r, c, 301 + s) * 5;
+
+                        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, sy);
+                        ctx.lineTo(sx + len, sy + len / 2);
+                        ctx.stroke();
+
+                        // Scratch highlight
+                        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                        ctx.beginPath();
+                        ctx.moveTo(sx, sy + 1);
+                        ctx.lineTo(sx + len, sy + len / 2 + 1);
+                        ctx.stroke();
+                    }
 
                     // Rivets in the 4 corners
                     ctx.fillStyle = '#222';
@@ -295,11 +346,14 @@ export class Map {
                         [x + 3, y + 3], [x + TILE_SIZE - 3, y + 3],
                         [x + 3, y + TILE_SIZE - 3], [x + TILE_SIZE - 3, y + TILE_SIZE - 3]
                     ];
-                    rivetPos.forEach(([rx, ry]) => {
+                    rivetPos.forEach(([rx, ry], i) => {
+                        // Some rivets might be missing
+                        if (this.prng(r, c, 400 + i) < 0.1) return;
+
                         ctx.beginPath();
                         ctx.arc(rx, ry, 1, 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.fillStyle = isRusted ? 'rgba(255, 200, 150, 0.3)' : 'rgba(255, 255, 255, 0.5)';
                         ctx.fillRect(rx, ry + 1, 1, 1); // small rivet highlight
                         ctx.fillStyle = '#222';
                     });
