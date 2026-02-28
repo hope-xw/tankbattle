@@ -2,6 +2,7 @@ import { Game } from '../core/Game';
 import { Entity } from './Entity';
 import { Tank } from './Tank';
 import { Particle } from './Particle';
+import { AudioEngine } from '../core/Audio';
 
 export class Bullet extends Entity {
     public dx: number = 0;
@@ -34,6 +35,7 @@ export class Bullet extends Entity {
         }
         // Map bounds checking
         if (this.game.map.collides(this.x, this.y, this.width, this.height)) {
+            AudioEngine.playHitWall();
             this.destroy();
             return;
         }

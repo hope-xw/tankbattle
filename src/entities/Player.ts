@@ -1,6 +1,7 @@
 import { Game } from '../core/Game';
 import { Tank } from './Tank';
 import { Particle } from './Particle';
+import { AudioEngine } from '../core/Audio';
 
 export class Player extends Tank {
     public lives: number = 3;
@@ -31,6 +32,7 @@ export class Player extends Tank {
     }
 
     public destroy() {
+        AudioEngine.playExplosion();
         // Massive explosion for player
         for (let i = 0; i < 30; i++) {
             const colors = ['#c0392b', '#d35400', '#f39c12'];

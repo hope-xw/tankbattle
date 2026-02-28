@@ -5,6 +5,7 @@ import { Entity } from '../entities/Entity';
 import { Enemy } from '../entities/Enemy';
 import { Tank } from '../entities/Tank';
 import { PowerUp } from '../entities/PowerUp';
+import { AudioEngine } from './Audio';
 
 export class Game {
     public canvas: HTMLCanvasElement;
@@ -20,6 +21,7 @@ export class Game {
     public enemiesRemaining: number = 20;
     public frozenTimer: number = 0;
     public shovelTimer: number = 0;
+    public stage: number = 1;
 
     public readonly gameWidth = COLS * TILE_SIZE;
     public readonly gameHeight = ROWS * TILE_SIZE;
@@ -38,6 +40,9 @@ export class Game {
     }
 
     public start() {
+        AudioEngine.init();
+        AudioEngine.playStart();
+        AudioEngine.playBGM();
         this.reset();
         this.isRunning = true;
         this.input.init();
@@ -50,12 +55,15 @@ export class Game {
         this.input.destroy();
     }
 
-    private reset() {
+    private reset(stageNum: number = 1) {
         this.entities = [];
-        this.score = 0;
-        this.enemiesRemaining = 20;
+        this.enemiesRemaining = 20; // Or formula: 15 + stageNum * 5
         this.frozenTimer = 0;
         this.shovelTimer = 0;
+        this.stage = stageNum;
+
+        // Slightly increase difficulty: start with less walls or more fast enemies later?
+        // For now, reload same base map template
         this.map.loadLevel();
         this.player = new Player(this, 50 * 4, 50 * 12);
         this.addEntity(this.player);
@@ -139,9 +147,12 @@ export class Game {
             }
             e.update(delta);
         }
+
+        this.checkLevelComplete();
     }
 
     private applyPowerUp(type: string, player: Player) {
+        AudioEngine.playPowerUp();
         switch (type) {
             case 'star':
                 player.canDestroySteel = true;
@@ -166,6 +177,45 @@ export class Game {
                 player.lives++;
                 break;
         }
+    }
+
+    private checkLevelComplete() {
+        if (this.isRunning && this.enemiesRemaining <= 0) {
+            // Check if all enemy entities are dead
+            const activeEnemies = this.entities.filter(e => e instanceof Enemy);
+            if (activeEnemies.length === 0) {
+                this.levelComplete();
+            }
+        }
+    }
+
+    private levelComplete() {
+        this.isRunning = false;
+        AudioEngine.stopBGM();
+        AudioEngine.playLevelComplete();
+        const overMenu = document.getElementById('game-over');
+        if (overMenu) {
+            overMenu.classList.remove('hidden');
+            overMenu.querySelector('h1')!.innerText = 'STAGE CLEAR';
+            overMenu.querySelector('button')!.classList.add('hidden'); // Hide start button temporarily
+        }
+
+        setTimeout(() => {
+            if (overMenu) {
+                overMenu.classList.add('hidden');
+                overMenu.querySelector('h1')!.innerText = 'GAME OVER';
+                overMenu.querySelector('button')!.classList.remove('hidden');
+            }
+            this.nextStage();
+        }, 4000);
+    }
+
+    private nextStage() {
+        this.reset(this.stage + 1);
+        AudioEngine.playBGM();
+        this.isRunning = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     private draw() {
@@ -246,7 +296,7 @@ export class Game {
 
         ctx.font = 'bold 48px "Black Ops One", monospace';
         ctx.fillStyle = '#e0dcd3';
-        ctx.fillText('1', leftCenterX, 130);
+        ctx.fillText(this.stage.toString(), leftCenterX, 130);
 
         // Score
         ctx.font = 'bold 20px "Share Tech Mono", monospace';
@@ -334,6 +384,7 @@ export class Game {
     }
 
     public gameOver() {
+        AudioEngine.stopBGM();
         this.stop();
         const overMenu = document.getElementById('game-over');
         if (overMenu) {

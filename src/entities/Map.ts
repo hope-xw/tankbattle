@@ -1,5 +1,6 @@
 import { Game } from '../core/Game';
 import { Particle } from './Particle';
+import { AudioEngine } from '../core/Audio';
 
 export const TILE_SIZE = 25;
 export const ROWS = 26;
@@ -297,6 +298,7 @@ export class Map {
                     if (type === 1) {
                         this.grid[r][c] = 0;
                         hit = true;
+                        AudioEngine.playHitBrick();
                         // Spawn brick particles
                         for (let i = 0; i < 8; i++) {
                             const colors = ['#8b4513', '#a0522d', '#cd853f'];
@@ -312,6 +314,7 @@ export class Map {
                             }
                         }
                         hit = true;
+                        AudioEngine.playHitSteel();
                         // Spark on steel hit
                         for (let i = 0; i < 5; i++) {
                             this.game.addEntity(new Particle(this.game, c * TILE_SIZE + 12, r * TILE_SIZE + 12, '#fff', 1.5, 1, 'spark'));
@@ -329,6 +332,7 @@ export class Map {
             y < baseY + TILE_SIZE * 2 && y + h > baseY
         ) {
             this.baseAlive = false;
+            AudioEngine.playBaseDestroyed();
             this.game.gameOver();
             hit = true;
         }

@@ -2,6 +2,7 @@ import { Game } from '../core/Game';
 import { Entity } from './Entity';
 import { Bullet } from './Bullet';
 import { Particle } from './Particle';
+import { AudioEngine } from '../core/Audio';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -80,6 +81,7 @@ export abstract class Tank extends Entity {
     public fire() {
         if (this.cooldown <= 0) {
             this.cooldown = this.fireRate;
+            AudioEngine.playShoot();
             let bx = this.x;
             let by = this.y;
             const bSize = 6;
@@ -206,6 +208,7 @@ export abstract class Tank extends Entity {
     }
 
     public destroy() {
+        AudioEngine.playExplosion();
         this.game.removeEntity(this);
         for (let i = 0; i < 20; i++) {
             // fiery orange to smoke circles
